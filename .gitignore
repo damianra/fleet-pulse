@@ -1,0 +1,24 @@
+# fastapi-skeleton
+__pycache__/
+*.pyc
+*.db
+test.db
+.venv/
+.env
+docker-build.*
+test-run.*
+dev-run.*
+publish.*
+
+node_modules
+dist
+build
+.env
+*.sqlite
+*.sqlite-journal
+test-results
+playwright-report
+docker-build.*
+test-run.*
+dev-run.*
+publish.*

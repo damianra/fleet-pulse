@@ -1,0 +1,38 @@
+{
+  "projectName": "fleet-pulse",
+  "scope": "fullstack",
+  "appType": "custom",
+  "arch": "flat",
+  "idea": "api creada en la pesta\u00f1a Backend (chat experto)",
+  "stacks": {
+    "backend": "fastapi",
+    "frontend": "vite-react"
+  },
+  "validated": true,
+  "steps": [
+    {
+      "id": 1,
+      "type": "backend",
+      "description": "API implementada iterando en chat de backend \u2014 FastAPI + SQLAlchemy sobre su skeleton con arquitectura flat",
+      "verify": "python -m pytest",
+      "status": "done",
+      "attempts": 1
+    },
+    {
+      "id": 2,
+      "type": "frontend",
+      "description": "Frontend implementado iterando en chat de dise\u00f1o \u2014 UI React + Vite + Tailwind aplicando las reglas de UI del AGENTS.md",
+      "verify": "npm run build",
+      "status": "done",
+      "attempts": 1
+    }
+  ],
+  "compliance": [
+    "privacidad",
+    "notfound"
+  ],
+  "timings": {
+    "startedAt": "2026-10-31T19:37:38.667968+00:00",
+    "finishedAt": "2026-10-31T19:58:56.213633+00:00"
+  }
+}

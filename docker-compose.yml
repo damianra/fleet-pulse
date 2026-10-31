@@ -1,0 +1,63 @@
+# FleetPulse — stack de producción local (API FastAPI + Postgres).
+#
+#   cp .env.example .env     # completar JWT_SECRET y POSTGRES_PASSWORD
+#   docker compose up --build
+#
+# La API queda en http://localhost:4000 (docs en /docs). Al boot migra a
+# head (alembic) y siembra la flota demo salvo SEED_DEMO=false.
+#
+# Escala horizontal: con REDIS_URL (servicio redis incluido acá) el
+# broadcast WS viaja por pub/sub entre réplicas y los loops en-proceso
+# (alertas / archivado / métricas) corren solo en el worker con el
+# lease de líder — se puede escalar con `--scale api=N` o
+# UVICORN_WORKERS>1 manteniendo RUN_BACKGROUND_LOOPS=true en todas.
+# Sin REDIS_URL el patrón vuelve a ser: api escalada con
+# RUN_BACKGROUND_LOOPS=false + 1 servicio extra con loops=true.
+# El rate-limit por IP sigue siendo por proceso (window propia de cada
+# réplica — el límite efectivo escala con N).
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fleetpulse}
+      POSTGRES_USER: ${POSTGRES_USER:-fleetpulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?definir POSTGRES_PASSWORD en .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      # La URL interna siempre apunta al servicio db — gana sobre el
+      # sqlite del .env. REDIS_URL activa el bus: pub/sub del broadcast
+      # WS + lease de líder para los loops en-proceso.
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-fleetpulse}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-fleetpulse}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${PORT:-4000}:4000"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

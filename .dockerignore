@@ -1,0 +1,21 @@
+# Contexto de build limpio — la imagen solo lleva app/, alembic/ y deps.
+.git/
+.github/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+*.db
+test.db
+tests/
+conftest.py
+dev-run.*
+test-run.*
+docker-build.*
+publish.*
+backend-state.json
+*.log
+.dockerignore
+docker-compose.yml
+Dockerfile
