@@ -32,6 +32,7 @@ const SEV_ICON = {
 
 export default function Alerts() {
   const [filter, setFilter] = useState('all');
+  const [expanded, setExpanded] = useState(null);
   const list = useApi('/api/alerts', { interval: 15000 });
   const stats = useApi('/api/alerts/stats', { interval: 30000 });
 
@@ -54,11 +55,12 @@ export default function Alerts() {
     const id = pick(a, 'id', 'alert_id', 'alertId');
     if (!id) return;
     try {
-      await api(`/api/alerts/${id}/${action}`, { method: 'POST' });
+      // resolve exige ResolveAlertIn (opcional → {}); acknowledge sin body.
+      await api(`/api/alerts/${id}/${action}`, { method: 'POST', body: action === 'resolve' ? {} : undefined });
       list.refetch(true);
       stats.refetch(true);
-    } catch {
-      // poll refleja el cambio
+    } catch (err) {
+      window.alert(err?.message ?? 'acción falló');
     }
   };
 
@@ -122,7 +124,11 @@ export default function Alerts() {
                   >
                     <Icon size={15} />
                   </span>
-                  <div className="min-w-0 flex-1">
+                  <div
+                    className="min-w-0 flex-1 cursor-pointer"
+                    onClick={() => setExpanded(expanded === id ? null : id)}
+                    title="Ver detalle"
+                  >
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-semibold text-slate-100">
                         {pick(a, 'title', 'type', 'alert_type') ?? 'Alerta'}
@@ -138,8 +144,20 @@ export default function Alerts() {
                         .filter(Boolean)
                         .join(' · ')}
                       {' · '}
-                      {timeAgo(pick(a, 'created_at', 'timestamp', 'time'))}
+                      {timeAgo(pick(a, 'triggered_at', 'created_at', 'timestamp', 'time'))}
                     </p>
+                    {expanded === id && (
+                      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-lg bg-slate-950/80 p-3 text-[11px] ring-1 ring-slate-800 md:grid-cols-3">
+                        <div><dt className="text-slate-500">tipo</dt><dd className="text-slate-200">{pick(a, 'type', 'alert_type') ?? '—'}</dd></div>
+                        <div><dt className="text-slate-500">disparada</dt><dd className="text-slate-200">{String(pick(a, 'triggered_at') ?? '—').replace('T', ' ').slice(0, 19)}</dd></div>
+                        <div><dt className="text-slate-500">reconocida</dt><dd className="text-slate-200">{pick(a, 'acknowledged_at') ? String(a.acknowledged_at).replace('T', ' ').slice(0, 19) : '—'}</dd></div>
+                        <div><dt className="text-slate-500">resuelta</dt><dd className="text-slate-200">{pick(a, 'resolved_at') ? String(a.resolved_at).replace('T', ' ').slice(0, 19) : '—'}</dd></div>
+                        <div><dt className="text-slate-500">vehículo</dt><dd className="truncate text-slate-200">{pick(a, 'vehicle_id') ?? '—'}</dd></div>
+                        <div><dt className="text-slate-500">ruta</dt><dd className="truncate text-slate-200">{pick(a, 'route_id') ?? '—'}</dd></div>
+                        <div><dt className="text-slate-500">entrega</dt><dd className="truncate text-slate-200">{pick(a, 'delivery_id') ?? '—'}</dd></div>
+                        <div className="col-span-2 md:col-span-3"><dt className="text-slate-500">notas de resolución</dt><dd className="text-slate-200">{pick(a, 'resolution_notes') || '—'}</dd></div>
+                      </dl>
+                    )}
                   </div>
                   {!resolved && (
                     <div className="flex shrink-0 gap-1.5">

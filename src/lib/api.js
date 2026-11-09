@@ -20,6 +20,11 @@ export const clearSession = () => {
   localStorage.removeItem(USER_KEY);
 };
 
+// Compat con App.jsx: antes leía el token Bearer de localStorage;
+// con cookie auth la señal de sesión viva es la cookie `csrf`
+// (legible, solo existe logueado — `auth` es httpOnly).
+export const getToken = () => readCookie('csrf');
+
 const readCookie = (name) =>
   document.cookie
     .split('; ')

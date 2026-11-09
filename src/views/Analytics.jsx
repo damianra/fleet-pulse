@@ -46,36 +46,38 @@ export default function Analytics() {
   const costs = useApi('/api/analytics/costs', { interval: 60000 });
   const history = useApi('/api/analytics/history', { interval: 60000 });
 
+  // Shapes reales de /api/analytics/*: dicts {k: count} (by_status,
+  // by_type, maintenance_by_month), arrays (top_by_deliveries) y
+  // history con métricas anidadas en row.data — se aplanan acá.
+  const fromMap = (m) =>
+    Object.entries(m ?? {}).map(([k, v]) => ({ label: statusLabel(k), value: Number(v) || 0 }));
+
+  // Serie temporal: daily_metrics.metric_date + data.deliveries.{created,delivered}
+  const histSeries = asArray(history.data).map((d) => ({
+    label: String(pick(d, 'metric_date', 'date', 'day') ?? '').slice(5, 10),
+    value: num(d.data?.deliveries ?? {}, 'delivered', 'created', 'count'),
+  }));
+
   const delSeries = toSeries(
-    pick(deliveries.data ?? {}, 'by_day', 'daily', 'series') ?? deliveries.data,
+    pick(deliveries.data ?? {}, 'by_day', 'daily', 'series'),
     ['day', 'date', 'label'],
     ['count', 'deliveries', 'completed', 'value', 'total'],
   );
 
-  const histSeries = toSeries(
-    history.data,
-    ['date', 'day', 'label'],
-    ['deliveries', 'completed_deliveries', 'distance_km', 'count', 'value'],
-  );
-
-  const driverBars = toCats(drivers.data, ['name', 'driver_name', 'driver'], [
-    'deliveries_completed', 'completed', 'deliveries', 'count',
-  ])
+  const driverBars = toCats(
+    pick(drivers.data ?? {}, 'top_by_deliveries') ?? drivers.data,
+    ['name', 'driver_name', 'driver', 'license', 'driver_id'],
+    ['deliveries_completed', 'completed', 'deliveries', 'count'],
+  )
     .sort((a, b) => b.value - a.value)
     .slice(0, 8);
 
-  const vehicleBars = toCats(vehicles.data, ['plate', 'name', 'vehicle', 'type'], [
-    'deliveries', 'trips', 'distance_km', 'count', 'value',
-  ]).slice(0, 8);
+  const vehicleBars = fromMap(pick(vehicles.data ?? {}, 'by_type', 'by_status'));
 
-  const alertCats = toCats(alerts.data, ['type', 'severity', 'category', 'name'], [
-    'count', 'total', 'value',
-  ]);
+  const alertCats = fromMap(pick(alerts.data ?? {}, 'by_type', 'by_severity'));
 
-  const costCats = toCats(costs.data, ['category', 'type', 'name', 'label'], [
-    'amount', 'cost', 'total', 'value',
-  ]);
-  const costTotal = pick(costs.data ?? {}, 'total', 'total_cost', 'amount');
+  const costCats = fromMap(costs.data?.maintenance_by_month);
+  const costTotal = pick(costs.data ?? {}, 'maintenance_total', 'total', 'total_cost', 'amount');
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">

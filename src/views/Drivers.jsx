@@ -26,10 +26,12 @@ export default function Drivers() {
     const id = pick(d, 'id', 'driver_id', 'driverId');
     if (!id) return;
     try {
-      await api(`/api/drivers/${id}/${onShift ? 'end-shift' : 'start-shift'}`, { method: 'POST' });
+      const action = onShift ? 'end-shift' : 'start-shift';
+      // start-shift exige StartShiftIn (opcional → {}); end-shift sin body.
+      await api(`/api/drivers/${id}/${action}`, { method: 'POST', body: onShift ? undefined : {} });
       list.refetch(true);
-    } catch {
-      // lo refleja el próximo poll
+    } catch (err) {
+      window.alert(err?.message ?? 'acción falló');
     }
   };
 

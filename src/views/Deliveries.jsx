@@ -47,11 +47,16 @@ export default function Deliveries() {
     if (!id) return;
     setBusy(`${id}:${action}`);
     try {
-      await api(`/api/deliveries/${id}/${action}`, { method: 'POST' });
+      // complete/fail/reschedule exigen body pydantic (campos
+      // opcionales → {}); start no lleva body.
+      const body = action === 'start' ? undefined : {};
+      await api(`/api/deliveries/${id}/${action}`, { method: 'POST', body });
       list.refetch(true);
       stats.refetch(true);
-    } catch {
-      // el estado lo refleja el próximo poll
+    } catch (err) {
+      // el estado lo refleja el próximo poll; el error se muestra
+      // (antes era catch silencioso — los 4xx parecían "no hacer nada")
+      setError?.(err?.message ?? 'acción falló');
     } finally {
       setBusy(null);
     }

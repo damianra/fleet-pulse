@@ -21,10 +21,23 @@ export default function Routes() {
     const id = pick(r, 'id', 'route_id', 'routeId');
     if (!id) return;
     try {
-      await api(`/api/routes/${id}/${action}`, { method: 'POST' });
+      // optimize exige body OptimizeIn (campos opcionales → {}); start/complete no llevan.
+      const body = action === 'optimize' ? {} : undefined;
+      await api(`/api/routes/${id}/${action}`, { method: 'POST', body });
+      if (action === 'optimize') {
+        // 202 → corre en background; poll al status hasta done/failed
+        // (sin esto el usuario no veía ni progreso ni resultado).
+        for (let i = 0; i < 20; i += 1) {
+          await new Promise((r) => setTimeout(r, 1200));
+          const st = await api(`/api/routes/${id}/optimization-status`).catch(() => null);
+          if (st && st.status !== 'running') break;
+        }
+      }
       list.refetch(true);
-    } catch {
-      // el próximo poll refleja el estado real
+    } catch (err) {
+      // antes: catch silencioso → los 4xx parecían "no hacer nada".
+      // El próximo poll sigue reflejando el estado; esto solo avisa.
+      window.alert(err?.message ?? 'acción falló');
     }
   };
 
